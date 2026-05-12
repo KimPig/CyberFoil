@@ -29,7 +29,6 @@ namespace Language {
     }
 
     void Load() {
-        std::ifstream ifs;
         std::string languagePath;
         int langInt = ResolveConfiguredLanguage();
         switch (langInt) {
@@ -83,14 +82,24 @@ namespace Language {
             default:
                 languagePath = "romfs:/lang/en.json";
         }
-        if (std::filesystem::exists(languagePath)) ifs = std::ifstream(languagePath);
-        else ifs = std::ifstream("romfs:/lang/en.json");
-        if (!ifs.good()) {
-            std::cout << "[FAILED TO LOAD LANGUAGE FILE]" << std::endl;
-            return;
+        auto loadLanguageFile = [](const std::string& path, json& out) {
+            std::ifstream file(path);
+            if (!file.good()) {
+                return false;
+            }
+            try {
+                out = json::parse(file);
+                return true;
+            } catch (...) {
+                return false;
+            }
+        };
+
+        if (!std::filesystem::exists(languagePath) || !loadLanguageFile(languagePath, lang)) {
+            if (!loadLanguageFile("romfs:/lang/en.json", lang)) {
+                std::cout << "[FAILED TO LOAD LANGUAGE FILE]" << std::endl;
+            }
         }
-        lang = json::parse(ifs);
-        ifs.close();
     }
 
     inline json GetRelativeJson(json j, std::string key) {
